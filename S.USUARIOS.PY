@@ -27,7 +27,11 @@ def enviar_correo(destinatario, asunto, cuerpo):
         smtp.login(remitente, contraseña)
         smtp.send_message(msg)
 
+def enviar_whatsapp(telefono, mensaje):
+    print(f"[Simulación] Enviando WhatsApp a {telefono}: {mensaje}")
+
 def ejecutar_sistema():
+    import html
     global usuarios_nuevos
     archivo = "usuario.xlsx"
     df = pd.read_excel(archivo)
@@ -90,13 +94,16 @@ def ejecutar_sistema():
                     time.sleep(10)
 
                     try:
+                        import pyperclip
+                        import pygetwindow as gw
                         max_espera = 20
                         inicio = time.time()
                         ventana_abierta = False
 
                         while time.time() - inicio < max_espera:
-                            ventana = gw.getWindowsWithTitle("WhatsApp")[0]
-                            if ventana:
+                            ventanas = gw.getWindowsWithTitle("WhatsApp")
+                            if ventanas:
+                                ventana = ventanas[0]
                                 ventana.activate()
                                 ventana_abierta = True
                                 break
@@ -107,10 +114,8 @@ def ejecutar_sistema():
                             continue
 
                         time.sleep(2)
-
                         pyautogui.click(300, 700)
                         time.sleep(1)
-
                         pyperclip.copy(mensaje)
                         pyautogui.hotkey("ctrl", "v")
                         time.sleep(1)
@@ -130,88 +135,39 @@ def ejecutar_sistema():
                     pyautogui.press("enter")
                     print(f"✅ Mensaje enviado a {nombre} ({telefono}) usando WhatsApp Desktop.")
 
-
-        
         except Exception as e:
             print(f"❌ Error con {row.get('apellidos y nombres', 'Desconocido')}: {e}")
 
-    totales = {
-        "Vencidos": len(usuarios_vencidos),
-        "Faltan 7 días": len(usuarios_7_dias),
-        "Falta 1 día": len(usuarios_1_dia),
-        "Suspendidos hoy": len(usuarios_0_dias),
-        "Usuarios nuevos": len(usuarios_nuevos),
-        "Notificados": len(usuarios_notificados),
-    }
+    # Función para generar filas de tabla
+    def filas_tabla(lista, columnas):
+        return "\n".join(
+            "<tr>{}</tr>".format("".join(f"<td>{html.escape(str(item[i]))}</td>" for i in range(columnas)))
+            for item in lista
+        )
 
-    html_template = f"""
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <title>Control de Contratos - UTI</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <style>
-            body {{ background-color: #121212; color: white; }}
-            .container {{ margin-top: 20px; }}
-            table {{ background-color: #1e1e2f; color: white; }}
-            thead {{ background-color: #3a3a5a; }}
-            .chart-container {{ width: 80%; margin: auto; padding-bottom: 40px; }}
-            .table-container {{ width: 90%; margin: auto; padding-top: 20px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
-            <img src="UTI.jpg" alt="Logo UTI" width="80">
-            <h1 class="text-info m-0">📊 Control de Contratos - UTI</h1>
-            </div>
+    # Leer plantilla y reemplazar marcadores
+    with open("dashboard_template.html", "r", encoding="utf-8") as f:
+        html_template = f.read()
 
+    html_final = (
+        html_template
+        .replace("{{VENCIDOS}}", str(len(usuarios_vencidos)))
+        .replace("{{FALTAN_7}}", str(len(usuarios_7_dias)))
+        .replace("{{FALTA_1}}", str(len(usuarios_1_dia)))
+        .replace("{{SUSPENDIDOS}}", str(len(usuarios_0_dias)))
+        .replace("{{NUEVOS}}", str(len(usuarios_nuevos)))
+        .replace("{{NOTIFICADOS}}", str(len(usuarios_notificados)))
+        .replace("{{TABLA_VENCIDOS}}", filas_tabla(usuarios_vencidos, 3))
+        .replace("{{TABLA_7DIAS}}", filas_tabla(usuarios_7_dias, 3))
+        .replace("{{TABLA_1DIA}}", filas_tabla(usuarios_1_dia, 3))
+        .replace("{{TABLA_SUSPENDIDOS}}", filas_tabla(usuarios_0_dias, 3))
+        .replace("{{TABLA_NUEVOS}}", filas_tabla(usuarios_nuevos, 4))
+        .replace("{{TABLA_NOTIFICADOS}}", filas_tabla(usuarios_notificados, 3))
+    )
 
-            <div class="chart-container"><canvas id="contratosChart"></canvas></div>
-            <script>
-                var ctx = document.getElementById('contratosChart').getContext('2d');
-                var contratosChart = new Chart(ctx, {{
-                    type: 'bar',
-                    data: {{
-                        labels: ['Vencidos', 'Faltan 7 días', 'Falta 1 día', 'Suspendidos hoy', 'Usuarios nuevos', 'Notificados'],
-                        datasets: [{{
-                            label: 'Usuarios',
-                            data: [{totales["Vencidos"]}, {totales["Faltan 7 días"]}, {totales["Falta 1 día"]}, {totales["Suspendidos hoy"]}, {totales["Usuarios nuevos"]}, {totales["Notificados"]}],
-                            backgroundColor: ['#ff4c4c', '#f7b32b', '#3498db', '#8e44ad', '#2ecc71']
-                        }}]
-                    }}
-                }});
-            </script>
-            <div class="table-container">
-                <h3 class="text-danger">⚠️ Usuarios con contrato vencido</h3>
-                <table class="table table-bordered"><thead><tr><th>Nombre</th><th>Teléfono</th><th>Fecha Vencimiento</th></tr></thead><tbody>{''.join(f"<tr><td>{u[0]}</td><td>{u[1]}</td><td>{u[2]}</td></tr>" for u in usuarios_vencidos)}</tbody></table>
-                <h3 class="text-warning">⚠️ Usuarios que vencen en 7 días</h3>
-                <table class="table table-bordered"><thead><tr><th>Nombre</th><th>Teléfono</th><th>Fecha Vencimiento</th></tr></thead><tbody>{''.join(f"<tr><td>{u[0]}</td><td>{u[1]}</td><td>{u[2]}</td></tr>" for u in usuarios_7_dias)}</tbody></table>
-                <h3 class="text-info">🔹 Usuarios que vencen en 1 día</h3>
-                <table class="table table-bordered"><thead><tr><th>Nombre</th><th>Teléfono</th><th>Fecha Vencimiento</th></tr></thead><tbody>{''.join(f"<tr><td>{u[0]}</td><td>{u[1]}</td><td>{u[2]}</td></tr>" for u in usuarios_1_dia)}</tbody></table>
-                <h3 class="text-primary">🚨 Usuarios que se suspenderán hoy</h3>
-                <table class="table table-bordered"><thead><tr><th>Nombre</th><th>Correo</th><th>Fecha Vencimiento</th></tr></thead><tbody>{''.join(f"<tr><td>{u[0]}</td><td>{u[1]}</td><td>{u[2]}</td></tr>" for u in usuarios_0_dias)}</tbody></table>
-                <h3 class="text-primary">🚨 Usuarios Nuevos</h3>
-                <table class="table table-bordered">
-                <thead>
-                    <tr><th>Nombre</th><th>Teléfono</th><th>Fecha Vencimiento</th><th>Mensaje Enviado</th></tr>
-                </thead>
-                <tbody>
-                    {''.join(f"<tr><td>{u[0]}</td><td>{u[1]}</td><td>{u[2]}</td><td>{u[3]}</td></tr>" for u in usuarios_nuevos)}
-                </tbody>
-                </table>
-                <h3 class="text-success">📢 Usuarios notificados</h3>
-                <table class="table table-bordered"><thead><tr><th>Nombre</th><th>Correo</th><th>Mensaje</th></tr></thead><tbody>{''.join(f"<tr><td>{u[0]}</td><td>{u[1]}</td><td>{u[2]}</td></tr>" for u in usuarios_notificados)}</tbody></table>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
     dashboard_path = "dashboard.html"
     with open(dashboard_path, "w", encoding="utf-8") as file:
-        file.write(html_template)
+        file.write(html_final)
     webbrowser.open("file://" + os.path.abspath(dashboard_path))
     print("✅ Dashboard generado y abierto exitosamente. Correos electrónicos enviados.")
 
@@ -311,7 +267,7 @@ def buscar_usuario_por_dni():
 
     ventana_dni = tk.Toplevel()
     ventana_dni.title("Buscar usuarios por DNI")
-    ventana_dni.geometry("300x170")
+    ventana_dni.geometry("500x220")
     ventana_dni.resizable(False, False)
     ventana_dni.transient()
     ventana_dni.grab_set()

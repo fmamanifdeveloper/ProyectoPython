@@ -41,7 +41,7 @@
             datasets: [
               {
                 label: "Usuarios",
-                data: [8, 0, 0, 0, 1, 0],
+                data: [{{VENCIDOS}}, {{FALTAN_7}}, {{FALTA_1}}, {{SUSPENDIDOS}}, {{NUEVOS}}, {{NOTIFICADOS}}],
                 backgroundColor: [
                   "#e74c3c", "#f39c12", "#0096c7", "#e67e22", "#28a745", "#ff9f43"
                 ],
@@ -89,14 +89,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td>FEBRES DELGADO OSCAR ANDRE</td><td>941970190</td><td>2025-05-19</td></tr>
-<tr><td>PAREDES GUTIERREZ YESICA</td><td>937510272</td><td>2025-05-19</td></tr>
-<tr><td>ALVA CHAVEZ ANDREA NIKOLE</td><td>922977009</td><td>2025-05-19</td></tr>
-<tr><td>MAMANI LLANLLAYA LUIS MIGUEL</td><td>958333953</td><td>2025-05-19</td></tr>
-<tr><td>FEBRES DELGADO OSCAR ANDRE</td><td>941970190</td><td>2025-05-20</td></tr>
-<tr><td>PAREDES GUTIERREZ YESICA</td><td>937510272</td><td>2025-05-20</td></tr>
-<tr><td>ALVA CHAVEZ ANDREA NIKOLE</td><td>922977009</td><td>2025-05-20</td></tr>
-<tr><td>MAMANI LLANLLAYA LUIS MIGUEL</td><td>958333953</td><td>2025-05-20</td></tr>
+              {{TABLA_VENCIDOS}}
             </tbody>
           </table>
         </div>
@@ -111,7 +104,7 @@
               </tr>
             </thead>
             <tbody>
-              
+              {{TABLA_7DIAS}}
             </tbody>
           </table>
         </div>
@@ -126,7 +119,7 @@
               </tr>
             </thead>
             <tbody>
-              
+              {{TABLA_1DIA}}
             </tbody>
           </table>
         </div>
@@ -141,7 +134,7 @@
               </tr>
             </thead>
             <tbody>
-              
+              {{TABLA_SUSPENDIDOS}}
             </tbody>
           </table>
         </div>
@@ -157,13 +150,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td>PAREDES GUTIERREZ YESICA</td><td>937510272</td><td>19/05/2025</td><td>Hola somos de la Unidad Tecnologia de la Informacion UTI 
- Sr.PAREDES GUTIERREZ YESICA, ¡bienvenido/a al sistema de SIAM SOFT!
-
-Tu usuario es: PAREDES4003
-Tu contraseña por defecto es 123456, por su seguridad le sugerimos cambiarla a la brevedad!!
-El uso de la cuenta es PERSONAL
-Puedes visitar nuestra pagina, https://www.muniyarabamba.gob.pe/</td></tr>
+              {{TABLA_NUEVOS}}
             </tbody>
           </table>
         </div>
@@ -178,7 +165,7 @@ Puedes visitar nuestra pagina, https://www.muniyarabamba.gob.pe/</td></tr>
               </tr>
             </thead>
             <tbody>
-              
+              {{TABLA_NOTIFICADOS}}
             </tbody>
           </table>
         </div>
