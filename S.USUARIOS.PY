@@ -27,10 +27,8 @@ def enviar_correo(destinatario, asunto, cuerpo):
         smtp.login(remitente, contraseña)
         smtp.send_message(msg)
 
-def enviar_whatsapp(telefono, mensaje):
-    print(f"[Simulación] Enviando WhatsApp a {telefono}: {mensaje}")
 
-def ejecutar_sistema():
+def enviar_whatsapp():
     import html
     global usuarios_nuevos
     archivo = "usuario.xlsx"
@@ -190,7 +188,7 @@ def buscar_usuario_por_dni():
 
         if not dni_input:
             messagebox.showinfo("Bienvenida", "¡Bienvenido/a al sistema!")
-            ejecutar_sistema()
+            enviar_whatsapp()
             ventana_dni.destroy()
             return
 
@@ -262,7 +260,7 @@ def buscar_usuario_por_dni():
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error: {e}")
 
-        ejecutar_sistema()
+        enviar_whatsapp()
         ventana_dni.destroy()
 
     ventana_dni = tk.Toplevel()
