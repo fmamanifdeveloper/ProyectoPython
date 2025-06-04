@@ -25,32 +25,40 @@ from email.message import EmailMessage
 from tkinter import messagebox
 from datetime import datetime
 import pyautogui
+import logging
+
+logging.basicConfig(filename='log_sistema.txt', level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 # --- UTILIDADES DE NOTIFICACIÓN ---
 def enviar_correo(destinatario, asunto, cuerpo):
     """
     Envía un correo electrónico usando SMTP SSL (Gmail).
     """
-    remitente = "informaticauti9@gmail.com"
-    contraseña = "ybnl zlka qwgb phrs"
-    msg = EmailMessage()
-    msg.set_content(cuerpo)
-    msg["Subject"] = asunto
-    msg["From"] = remitente
-    msg["To"] = destinatario
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(remitente, contraseña)
-        smtp.send_message(msg)
+    try:
+        remitente = "informaticauti9@gmail.com"
+        contraseña = "ybnl zlka qwgb phrs"
+        msg = EmailMessage()
+        msg.set_content(cuerpo)
+        msg["Subject"] = asunto
+        msg["From"] = remitente
+        msg["To"] = destinatario
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(remitente, contraseña)
+            smtp.send_message(msg)
+        logging.info(f"Correo enviado a {destinatario} con asunto '{asunto}'")
+    except Exception as e:
+        logging.error(f"Error al enviar correo a {destinatario}: {e}")
+        raise
 
 def enviar_whatsapp(telefono, mensaje):
     """
     Envía un mensaje por WhatsApp Desktop automatizando el proceso.
     """
-    if not telefono.startswith("+"):
-        telefono = "+51" + telefono
-    webbrowser.open(f"whatsapp://send?phone={telefono}")
-    time.sleep(7)
     try:
+        if not telefono.startswith("+"):
+            telefono = "+51" + telefono
+        webbrowser.open(f"whatsapp://send?phone={telefono}")
+        time.sleep(7)
         import pyperclip
         import pygetwindow as gw
         ventana = None
@@ -62,17 +70,20 @@ def enviar_whatsapp(telefono, mensaje):
             try:
                 ventana.activate()
                 ventana.maximize()
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"No se pudo maximizar/activar ventana WhatsApp: {e}")
         else:
+            logging.error("No se encontró ventana de WhatsApp para activar.")
             print("No se encontró ventana de WhatsApp para activar.")
             return
         pyautogui.click(300, 700)
         pyperclip.copy(mensaje)
         pyautogui.hotkey("ctrl", "v")
         pyautogui.press("enter")
+        logging.info(f"Mensaje WhatsApp enviado a {telefono}")
         print(f"✅ Mensaje enviado a {telefono} usando WhatsApp Desktop.")
     except Exception as e:
+        logging.error(f"Error al enviar mensaje por WhatsApp a {telefono}: {e}")
         print(f"⚠️ Error al enviar mensaje por WhatsApp: {e}")
 
 # --- PROCESAMIENTO DE USUARIOS Y NOTIFICACIONES ---
@@ -81,7 +92,12 @@ def procesar_usuarios():
     Procesa el archivo Excel de usuarios, envía notificaciones y genera el dashboard.
     """
     archivo = "usuario.xlsx"
-    df = pd.read_excel(archivo)
+    try:
+        df = pd.read_excel(archivo)
+        logging.info(f"Archivo {archivo} leído correctamente.")
+    except Exception as e:
+        logging.error(f"Error al leer archivo {archivo}: {e}")
+        raise
     df.columns = df.columns.str.strip().str.lower()
     hoy = datetime.now().date()
     hora_actual = datetime.now().hour
@@ -110,6 +126,7 @@ def procesar_usuarios():
             if mensaje:
                 correo_raw = row.get("email")
                 if not isinstance(correo_raw, str) or pd.isna(correo_raw) or "@" not in correo_raw:
+                    logging.warning(f"Email inválido para {nombre}: {correo_raw}")
                     print(f"❌ Email inválido: {correo_raw}")
                     continue
                 correo = correo_raw.strip()
@@ -120,6 +137,7 @@ def procesar_usuarios():
                 if telefono:
                     enviar_whatsapp(telefono, mensaje)
         except Exception as e:
+            logging.error(f"Error con usuario {row.get('apellidos y nombres', 'Desconocido')}: {e}")
             print(f"❌ Error con {row.get('apellidos y nombres', 'Desconocido')}: {e}")
     return usuarios_vencidos, usuarios_7_dias, usuarios_1_dia, usuarios_0_dias, usuarios_nuevos, usuarios_notificados
 
@@ -128,6 +146,7 @@ def filas_tabla(lista, columnas):
     Genera filas HTML para la tabla del dashboard.
     """
     import html
+    logging.info(f"Generando filas de tabla para {len(lista)} elementos y {columnas} columnas.")
     return "\n".join(
         "<tr>{}</tr>".format("".join(f"<td>{html.escape(str(item[i]))}</td>" for i in range(columnas)))
         for item in lista
@@ -137,8 +156,13 @@ def generar_dashboard(usuarios_vencidos, usuarios_7_dias, usuarios_1_dia, usuari
     """
     Genera el dashboard HTML con los datos procesados.
     """
-    with open("dashboard_template.html", "r", encoding="utf-8") as f:
-        html_template = f.read()
+    try:
+        with open("dashboard_template.html", "r", encoding="utf-8") as f:
+            html_template = f.read()
+        logging.info("Plantilla dashboard leída correctamente.")
+    except Exception as e:
+        logging.error(f"Error al leer plantilla dashboard: {e}")
+        raise
     html_final = (
         html_template
         .replace("{{VENCIDOS}}", str(len(usuarios_vencidos)))
@@ -155,10 +179,15 @@ def generar_dashboard(usuarios_vencidos, usuarios_7_dias, usuarios_1_dia, usuari
         .replace("{{TABLA_NOTIFICADOS}}", filas_tabla(usuarios_notificados, 3))
     )
     dashboard_path = "dashboard.html"
-    with open(dashboard_path, "w", encoding="utf-8") as file:
-        file.write(html_final)
-    webbrowser.open("file://" + os.path.abspath(dashboard_path))
-    print("✅ Dashboard generado y abierto exitosamente. Correos electrónicos enviados.")
+    try:
+        with open(dashboard_path, "w", encoding="utf-8") as file:
+            file.write(html_final)
+        logging.info("Dashboard generado correctamente.")
+        webbrowser.open("file://" + os.path.abspath(dashboard_path))
+        print("✅ Dashboard generado y abierto exitosamente. Correos electrónicos enviados.")
+    except Exception as e:
+        logging.error(f"Error al generar o abrir dashboard: {e}")
+        raise
 
 def cargar_credenciales():
     """
@@ -166,8 +195,10 @@ def cargar_credenciales():
     """
     try:
         with open("credenciales.json", "r") as f:
+            logging.info("Credenciales cargadas correctamente.")
             return json.load(f)
     except Exception as e:
+        logging.error(f"No se pudo cargar credenciales: {e}")
         messagebox.showerror("Error", f"No se pudo cargar credenciales: {e}")
         return {}
 
@@ -176,17 +207,23 @@ def buscar_usuario_por_dni():
     """
     Interfaz para buscar usuarios por DNI y enviar credenciales por correo y WhatsApp.
     """
+    import logging
+    logging.basicConfig(filename='log_busqueda_dni.txt', level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
     def buscar():
         global usuarios_nuevos
         dni_input = entrada_dni.get().strip()
+        logging.info(f"DNI(s) ingresados: {dni_input}")
         if not dni_input:
             messagebox.showinfo("Bienvenida", "¡Bienvenido/a al sistema!")
+            logging.info("No se ingresó ningún DNI. Se ejecuta procesar_usuarios().")
             procesar_usuarios()
             ventana_dni.destroy()
             return
         dni_lista = [dni.strip() for dni in dni_input.split(",") if dni.strip()]
+        logging.info(f"DNI(s) procesados: {dni_lista}")
         if not dni_lista:
             messagebox.showerror("Error", "No ingresaste ningún DNI válido.")
+            logging.warning("No se ingresó ningún DNI válido.")
             return
         try:
             archivo = "usuario.xlsx"
@@ -195,6 +232,7 @@ def buscar_usuario_por_dni():
             columna_dni = next((col for col in df.columns if "dni" in col), None)
             if not columna_dni:
                 messagebox.showerror("Error", "No se encontró la columna del DNI en el Excel.")
+                logging.error("No se encontró la columna del DNI en el Excel.")
                 return
             df[columna_dni] = df[columna_dni].apply(lambda x: str(int(x)).zfill(8) if pd.notna(x) else "")
             encontrados = 0
@@ -209,8 +247,10 @@ def buscar_usuario_por_dni():
                     primer_apellido = nombre.split()[0].upper() if nombre else "USUARIO"
                     ultimos_4_dni = dni[-4:] if dni and len(dni) >= 4 else "XXXX"
                     codigo_personalizado = f"{primer_apellido}{ultimos_4_dni}"
+                    logging.info(f"DNI encontrado: {dni} - Nombre: {nombre} - Email: {email} - Teléfono: {telefono}")
                     if pd.isna(email) or not isinstance(email, str) or "@" not in email:
                         messagebox.showinfo("Bienvenida", f"{nombre} encontrado, pero sin correo válido.")
+                        logging.warning(f"{nombre} encontrado, pero sin correo válido.")
                         continue
                     asunto = "Bienvenida"
                     cuerpo = (
@@ -222,23 +262,29 @@ def buscar_usuario_por_dni():
                     )
                     try:
                         enviar_correo(email, asunto, cuerpo)
+                        logging.info(f"Correo de bienvenida enviado a {email}")
                         print(f"✅ Correo de bienvenida enviado a {email}")
                         usuarios_nuevos.append((nombre, telefono, fecha_fin.strftime("%d/%m/%Y"), cuerpo))
                         encontrados += 1
                     except Exception as e:
+                        logging.error(f"Error al enviar correo a {email}: {e}")
                         print(f"❌ Error al enviar correo a {email}: {e}")
                         messagebox.showerror("Error", f"No se pudo enviar correo a {email}")
                         if telefono:
                             enviar_whatsapp(telefono, cuerpo)
+                            logging.info(f"WhatsApp de bienvenida enviado a {telefono}")
                         usuarios_nuevos.append((nombre, telefono, fecha_fin.strftime("%d/%m/%Y"), cuerpo))
                         encontrados += 1
                 else:
                     print(f"⚠️ DNI no encontrado: {dni}")
+                    logging.warning(f"DNI no encontrado: {dni}")
                     messagebox.showinfo("No encontrado", f"No se encontró el DNI {dni} en el archivo.")
             if encontrados > 0:
                 messagebox.showinfo("Éxito", f"Se procesaron {encontrados} usuario(s) correctamente.")
+                logging.info(f"Se procesaron {encontrados} usuario(s) correctamente.")
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error: {e}")
+            logging.error(f"Ocurrió un error: {e}")
         procesar_usuarios()
         ventana_dni.destroy()
     ventana_dni = tk.Toplevel()
